@@ -6,8 +6,8 @@
  *   javascript:(()=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/USER/REPO@main/token.js?v='+Date.now();(document.body||document.documentElement).appendChild(s)})()
  *
  * Usage:
- *   Open any site → click the bookmark → popup shows the Base64-decoded value
- *   of the configured cookie. Click again (or press Esc) to close.
+ *   Open any site → click the bookmark → popup shows the JWT cookie value.
+ *   Click again (or press Esc) to close.
  *
  * Config:
  *   Edit CONFIG below. No other file needed.
@@ -17,7 +17,7 @@
 
   /* ============ CONFIG ============ */
   const CONFIG = {
-    cookieName : 'token',   // cookie to read
+    cookieName : 'jwt',     // cookie holding the JWT
     reloginUrl : '',        // '' = current site root (location.origin + '/')
     brand      : 'Nexus Wave',
   };
@@ -34,20 +34,8 @@
     return hit ? decodeURIComponent(hit.slice(name.length + 1)) : '';
   };
 
-  const b64decode = (str) => {
-    let s = str.replace(/-/g, '+').replace(/_/g, '/');
-    s += '='.repeat((4 - (s.length % 4)) % 4);
-    return new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0)));
-  };
-
-  const token   = readCookie(CONFIG.cookieName);
-  const missing = !token || !token.trim();
-
-  let decoded = '', decodeError = '';
-  if (!missing) {
-    try { decoded = b64decode(token); }
-    catch (err) { decodeError = (err && err.message) || 'invalid base64'; }
-  }
+  const jwt     = readCookie(CONFIG.cookieName).trim();
+  const missing = !jwt;
 
   const host = document.createElement('div');
   host.id = HOST_ID;
@@ -101,7 +89,7 @@
       text-transform: uppercase; color: #8b949e; margin-bottom: 7px;
     }
     textarea {
-      display: block; width: 100%; height: 78px; resize: vertical;
+      display: block; width: 100%; height: 96px; resize: vertical;
       padding: 10px 11px; border-radius: 9px;
       background: #010409; color: #7ee787; border: 1px solid #30363d; outline: none;
       font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -177,21 +165,19 @@
   };
 
   if (missing) {
-    body.appendChild(stateEl('Token not found', 'No token cookie on this page. Please relogin to continue.'));
-  } else if (decodeError) {
-    body.appendChild(stateEl('Decode failed', decodeError));
+    body.appendChild(stateEl('JWT not found', 'No JWT cookie on this page. Please relogin to continue.'));
   } else {
     const lbl = document.createElement('div');
     lbl.className = 'lbl';
-    lbl.textContent = 'Decoded token';
+    lbl.textContent = 'JWT token';
     const ta = document.createElement('textarea');
     ta.readOnly = true;
     ta.spellcheck = false;
-    ta.value = decoded;
+    ta.value = jwt;
     ta.addEventListener('focus', () => ta.select());
     body.append(lbl, ta);
     copyBtn.hidden = false;
-    copyBtn.addEventListener('click', () => copy(decoded, copyBtn));
+    copyBtn.addEventListener('click', () => copy(jwt, copyBtn));
   }
 
   async function copy(text, btn) {
